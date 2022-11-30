@@ -21,22 +21,22 @@ module regfile(
     reg [31:0] reg_array [31:0];
     // write
     always @ (posedge clk) begin
-        if (we && waddr!=5'b0) begin
-            reg_array[waddr] <= wdata;
+        if (wb_we && wb_waddr!=5'b0) begin
+            reg_array[wb_waddr] <= wb_wdata;
         end
     end
 
     // read out 1
     assign rdata1 = (raddr1 == 5'b0) ? 32'b0 : 
-                    ((raddr1 == ex_waddr) && ex_we))? ex_wdata:
-                    ((raddr1 == mem_waddr) && mem_we))? mem_wdata:
-                    ((raddr1 == wb_waddr) && wb_we))? wb_wdata:
+                    ((raddr1 == ex_waddr) && ex_we)? ex_wdata:
+                    ((raddr1 == mem_waddr) && mem_we)? mem_wdata:
+                    ((raddr1 == wb_waddr) && wb_we)? wb_wdata:
                     reg_array[raddr1];
 
     // read out2
     assign rdata2 = (raddr2 == 5'b0) ? 32'b0 : 
-                    ((raddr2 == ex_waddr) && ex_we))? ex_wdata:
-                    ((raddr2 == mem_waddr) && mem_we))? mem_wdata:
-                    ((raddr2 == wb_waddr) && wb_we))? wb_wdata:
+                    ((raddr2 == ex_waddr) && ex_we)? ex_wdata:
+                    ((raddr2 == mem_waddr) && mem_we)? mem_wdata:
+                    ((raddr2 == wb_waddr) && wb_we)? wb_wdata:
                     reg_array[raddr2];
 endmodule
