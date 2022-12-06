@@ -9,6 +9,8 @@ module EX(
 
     output wire [`EX_TO_MEM_WD-1:0] ex_to_mem_bus,
     output wire [`EX_TO_RF_WD-1:0] ex_to_rf_bus,
+    output wire inst_is_lw,
+ 
 
     output wire data_sram_en,
     output wire [3:0] data_sram_wen,
@@ -59,6 +61,11 @@ module EX(
         rf_rdata1,         // 63:32
         rf_rdata2          // 31:0
     } = id_to_ex_bus_r;
+    
+    assign data_sram_en = data_ram_en;
+    assign data_sram_wen = data_ram_wen;
+    assign inst_is_lw = (data_ram_en == 6'b10_0011);
+    
 
     wire [31:0] imm_sign_extend, imm_zero_extend, sa_zero_extend;
     assign imm_sign_extend = {{16{inst[15]}},inst[15:0]};

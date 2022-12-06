@@ -31,6 +31,8 @@ module mycpu_core(
     wire [`MEM_TO_RF_WD-1:0] mem_to_rf_bus;
     wire [`WB_TO_RF_WD-1:0] wb_to_rf_bus;
     wire [`StallBus-1:0] stall;
+    wire inst_is_lw;
+    wire stall_for_id_if;
 
     IF u_IF(
     	.clk             (clk             ),
@@ -56,7 +58,9 @@ module mycpu_core(
         .mem_to_rf_bus   (mem_to_rf_bus   ),
         .wb_to_rf_bus    (wb_to_rf_bus    ),
         .id_to_ex_bus    (id_to_ex_bus    ),
-        .br_bus          (br_bus          )
+        .br_bus          (br_bus          ),
+        .inst_is_lw      (inst_is_lw      ),
+        .stall_for_id_if (stall_for_id_if )
     );
 
     EX u_EX(
@@ -69,7 +73,8 @@ module mycpu_core(
         .data_sram_en    (data_sram_en    ),
         .data_sram_wen   (data_sram_wen   ),
         .data_sram_addr  (data_sram_addr  ),
-        .data_sram_wdata (data_sram_wdata )
+        .data_sram_wdata (data_sram_wdata ),
+        .inst_is_lw      (inst_is_lw      )
     );
 
     MEM u_MEM(
@@ -95,8 +100,9 @@ module mycpu_core(
     );
 
     CTRL u_CTRL(
-    	.rst   (rst   ),
-        .stall (stall )
+    	.rst               (rst               ),
+        .stall             (stall             ),
+        .stall_for_id_if   (stall_for_id_if   )
     );
     
 endmodule
