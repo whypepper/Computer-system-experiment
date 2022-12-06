@@ -62,8 +62,8 @@ module EX(
         rf_rdata2          // 31:0
     } = id_to_ex_bus_r;
     
-    assign data_sram_en = data_ram_en;
-    assign data_sram_wen = data_ram_wen;
+
+    
     assign inst_is_lw = (data_ram_en == 6'b10_0011);
     
 
@@ -106,7 +106,12 @@ module EX(
         rf_waddr,       // 36:32
         ex_result       // 31:0
     };
-
+    
+    assign data_sram_en = data_ram_en;
+    assign data_sram_wen = data_ram_wen;
+    assign data_sram_addr = ex_result; 
+    assign data_sram_wdata = rf_rdata2;
+    
 
 
 
