@@ -6,11 +6,13 @@ module EX(
     input wire [`StallBus-1:0] stall,
 
     input wire [`ID_TO_EX_WD-1:0] id_to_ex_bus,
-
+    output wire stallreq_for_ex,
     output wire [`EX_TO_MEM_WD-1:0] ex_to_mem_bus,
     output wire [`EX_TO_RF_WD-1:0] ex_to_rf_bus,
+    output wire [`EX_TO_HILO-1:0] ex_to_hilo_bus,
     output wire inst_is_load,
- 
+    
+    //input  wire [5:0] mul_div_bus,
     output wire data_sram_en,
     output wire [3:0] data_sram_wen,
     output wire [31:0] data_sram_addr,
@@ -45,7 +47,15 @@ module EX(
     wire sel_rf_res;
     wire [31:0] rf_rdata1, rf_rdata2;
     reg is_in_delayslot;
-
+    
+    wire w_hi_we;
+    wire w_lo_we;
+    wire r_hi_we;
+    wire r_lo_we;
+    wire[31:0] hi_o;
+    wire[31:0] lo_o;
+    wire [5:0] mul_div_bus;
+    //assign mul_div_bus = 6'b0;
     assign {
         ex_pc,          // 148:117
         inst,           // 116:85
@@ -58,7 +68,14 @@ module EX(
         rf_waddr,       // 69:65
         sel_rf_res,     // 64
         rf_rdata1,         // 63:32
-        rf_rdata2          // 31:0
+        rf_rdata2,         // 31:0
+        r_hi_we,
+        r_lo_we,
+        w_hi_we,
+        w_lo_we,
+        hi_o,
+        lo_o,
+        mul_div_bus
     } = id_to_ex_bus_r;
     
     assign  inst_is_load =  (inst[31:26] == 6'b10_0011);
@@ -86,17 +103,9 @@ module EX(
         .alu_result  (alu_result  )
     );
 
-    assign ex_result = alu_result;
-
-    assign ex_to_mem_bus = {
-        ex_pc,          // 75:44
-        data_ram_en,    // 43
-        data_ram_wen,   // 42:39
-        sel_rf_res,     // 38
-        rf_we,          // 37
-        rf_waddr,       // 36:32
-        ex_result       // 31:0
-    };
+    assign ex_result = r_hi_we ? hi_o:
+                       r_lo_we ? lo_o:
+                       alu_result;
     
     assign ex_to_rf_bus = {
         rf_we,          // 37
@@ -110,21 +119,25 @@ module EX(
     assign data_sram_wdata = rf_rdata2;
     
 
-
-
-
     // MUL part
     wire [63:0] mul_result;
     wire mul_signed; // 有符号乘法标记
-
+    wire inst_mult;
+    wire inst_multu;
+    
+    assign inst_mult = mul_div_bus[3];
+    assign inst_multu = mul_div_bus[2];
+    assign mul_signed = inst_mult;
+    
     mul u_mul(
     	.clk        (clk            ),
         .resetn     (~rst           ),
         .mul_signed (mul_signed     ),
-        .ina        (      ), // 乘法源操作数1
-        .inb        (      ), // 乘法源操作数2
+        .ina        (rf_rdata1      ), // 乘法源操作数1
+        .inb        (rf_rdata2      ), // 乘法源操作数2
         .result     (mul_result     ) // 乘法结果 64bit
     );
+
 
     // DIV part
     wire [63:0] div_result;
@@ -132,6 +145,9 @@ module EX(
     wire div_ready_i;
     reg stallreq_for_div;
     assign stallreq_for_ex = stallreq_for_div;
+    
+    assign inst_div =  mul_div_bus[5];
+    assign inst_divu =  mul_div_bus[4];
 
     reg [31:0] div_opdata1_o;
     reg [31:0] div_opdata2_o;
@@ -218,6 +234,60 @@ module EX(
     end
 
     // mul_result 和 div_result 可以直接使用
+    wire [31:0] lo_i;
+    wire [31:0] hi_i;
+    wire inst_mtlo;
+    wire inst_mthi;
+    assign inst_mtlo =  mul_div_bus[1];
+    assign inst_mthi =  mul_div_bus[0];
+    
+    assign lo_i =  inst_div ? div_result[31:0]:
+                   inst_divu ? div_result[31:0]:
+                   inst_mult ? mul_result[31:0]:
+                   inst_multu ? mul_result[31:0]:
+                   inst_mtlo ? rf_rdata1:
+                   32'b0;
+                   
+    assign hi_i =  inst_div ? div_result[63:32]:
+                   inst_divu ? div_result[63:32]:
+                   inst_mult ? mul_result[63:32]:
+                   inst_multu ? mul_result[63:32]:
+                   inst_mthi ? rf_rdata1:
+                   32'b0;
+    
+   
+    assign ex_to_mem_bus = {
+        ex_pc,          // 75:44
+        data_ram_en,    // 43
+        data_ram_wen,   // 42:39
+        sel_rf_res,     // 38
+        rf_we,          // 37
+        rf_waddr,       // 36:32
+        ex_result,      // 31:0
+        w_hi_we,
+        w_lo_we,
+        hi_i,
+        lo_i
+    };
+    assign ex_to_hilo_bus=
+    {
+        w_hi_we,
+        w_lo_we,
+        hi_i,
+        lo_i
+    };
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
 endmodule
