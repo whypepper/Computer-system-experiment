@@ -6,18 +6,42 @@ module regfile(
     input wire [4:0] raddr2,
     output wire [31:0] rdata2,
     
-    input wire wb_we,
-    input wire [4:0] wb_waddr,
-    input wire [31:0] wb_wdata,
+   
+    input wire [`EX_TO_RF_WD-1:0] ex_to_rf_bus,
+    input wire [`MEM_TO_RF_WD-1:0] mem_to_rf_bus,
+    input wire [`WB_TO_RF_WD-1:0] wb_to_rf_bus
 
-    input wire ex_we,
-    input wire [4:0] ex_waddr,
-    input wire [31:0] ex_wdata,
-
-    input wire mem_we,
-    input wire [4:0] mem_waddr,
-    input wire [31:0] mem_wdata
 );
+
+    wire ex_we;
+    wire [4:0] ex_waddr;
+    wire [31:0] ex_wdata;
+
+    wire mem_we;
+    wire [4:0] mem_waddr;
+    wire [31:0] mem_wdata;
+    
+    wire wb_we;
+    wire [4:0] wb_waddr;
+    wire [31:0] wb_wdata;
+
+    
+    assign {
+        ex_we,
+        ex_waddr,
+        ex_wdata
+    } = ex_to_rf_bus;
+    assign {
+        mem_we,
+        mem_waddr,
+        mem_wdata
+    } = mem_to_rf_bus;
+    assign {
+        wb_we,
+        wb_waddr,
+        wb_wdata
+    } = wb_to_rf_bus;
+
     reg [31:0] reg_array [31:0];
     // write
     always @ (posedge clk) begin
