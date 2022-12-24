@@ -48,6 +48,7 @@ module EX(
     wire [31:0] rf_rdata1, rf_rdata2;
     reg is_in_delayslot;
     
+    wire [5:0] opcode;
     wire w_hi_we;
     wire w_lo_we;
     wire r_hi_we;
@@ -78,9 +79,27 @@ module EX(
         mul_div_bus
     } = id_to_ex_bus_r;
     
-    assign  inst_is_load =  (inst[31:26] == 6'b10_0011);
     
+    assign opcode = inst[31:26];
 
+    wire [63:0] op_d, func_d;
+    
+    decoder_6_64 u0_decoder_6_64(
+    	.in  (opcode  ),
+        .out (op_d )
+    );
+    
+    assign inst_lw      = op_d[6'b10_0011];
+    assign inst_lb      = op_d[6'b10_0000];
+    assign inst_lbu      = op_d[6'b10_0100];
+    assign inst_lh      = op_d[6'b10_0001];
+    assign inst_lhu      = op_d[6'b10_0101];
+    assign inst_sb      = op_d[6'b10_1000];
+    assign inst_sh      = op_d[6'b10_1001];    
+    assign inst_sw      = op_d[6'b10_1011];
+    
+    assign  inst_is_load =  inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu ;
+    
     wire [31:0] imm_sign_extend, imm_zero_extend, sa_zero_extend;
     assign imm_sign_extend = {{16{inst[15]}},inst[15:0]};
     assign imm_zero_extend = {16'b0, inst[15:0]};
@@ -113,10 +132,22 @@ module EX(
         ex_result       // 31:0
     };
     
-    assign data_sram_en = data_ram_en;
-    assign data_sram_wen = data_ram_wen;
-    assign data_sram_addr = ex_result; 
-    assign data_sram_wdata = rf_rdata2;
+    wire [3:0] byte_sel;
+    wire [3:0] data_ram_sel;
+    decoder_2_4 u_decoder_2_4(
+         .in  (ex_result[1:0]),
+         .out (byte_sel      )
+    );
+    
+    assign data_ram_sel = inst_sb | inst_lb | inst_lbu ? byte_sel :
+                          inst_sh | inst_lh | inst_lhu ? {{2{byte_sel[2]}},{2{byte_sel[0]}}} :
+                          inst_sw | inst_lw ? 4'b1111 : 4'b0000;
+
+    assign data_sram_en     = data_ram_en;
+    assign data_sram_wen    = {4{data_ram_wen}}&data_ram_sel;
+    assign data_sram_addr   = ex_result; 
+    assign data_sram_wdata  = inst_sb ? {4{rf_rdata2[7:0]}}  :
+                          inst_sh ? {2{rf_rdata2[15:0]}} : rf_rdata2;
     
 
     // MUL part
@@ -267,7 +298,9 @@ module EX(
         w_hi_we,
         w_lo_we,
         hi_i,
-        lo_i
+        lo_i,
+        inst[31:26],
+        data_ram_sel
     };
     assign ex_to_hilo_bus=
     {
