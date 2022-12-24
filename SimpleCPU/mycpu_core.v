@@ -37,6 +37,7 @@ module mycpu_core(
     wire inst_is_load;
     wire stallreq_for_load;
     wire stallreq_for_ex;
+    wire [3:0] data_ram_sel;
     //wire [5:0] mul_div_bus;
 
     IF u_IF(
